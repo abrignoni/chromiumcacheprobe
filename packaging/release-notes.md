@@ -8,6 +8,6 @@ chromiumcacheprobe {{VERSION}}: standalone executables of `chromiumcacheprobe.py
 
 Each archive holds the command line tool, the window, `README.txt`, `LICENSE` and `SHA256SUMS.txt`. `SHA256SUMS.txt` beside the archives covers the archives and the two source files. Before they were attached, both executables were run on the public DFRWS 2021 Galaxy S10 cache subset in the tests, and wrote the same bytes as `python chromiumcacheprobe.py` for `entries` and `recover`. The window was also started and checked to stay up.
 
-The executables carry the optional brotli package, so they read Brotli-compressed cache bodies. None of them is code signed: Windows SmartScreen and macOS Gatekeeper will each ask once, and the README inside says what to do.
+Where a prebuilt brotli wheel exists for the target, the executables carry it and read Brotli-compressed cache bodies; the others report those bodies as not decodable. None of them is code signed: Windows SmartScreen and macOS Gatekeeper will each ask once, and the README inside says what to do.
 
 `chromiumcacheprobe.py` needs nothing built: `python3 chromiumcacheprobe.py` works on macOS, Linux and Windows with Python 3.10 or later and the standard library alone.
