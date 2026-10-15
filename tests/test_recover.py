@@ -83,7 +83,7 @@ class ReaderTests(unittest.TestCase):
             name = f"{index:016x}_0" if container != "raw" else f"clip_part{index}.mp4"
             path = directory / name
             path.write_bytes(body)
-            pairs.append((path, str(path.relative_to(self.root))))
+            pairs.append((path, path.relative_to(self.root).as_posix()))
         if init:
             path = directory / "initialization_0"
             path.write_bytes(
@@ -91,7 +91,7 @@ class ReaderTests(unittest.TestCase):
                     self.init, "https://video.invalid/pattern.mp4?token=synthetic"
                 )
             )
-            pairs.append((path, str(path.relative_to(self.root))))
+            pairs.append((path, path.relative_to(self.root).as_posix()))
         return pairs
 
     def recover(self, pairs, **kwargs):
@@ -174,7 +174,7 @@ class ReaderTests(unittest.TestCase):
                     partition="https://other.invalid",
                 )
             )
-            pairs.append((path, str(path.relative_to(self.root))))
+            pairs.append((path, path.relative_to(self.root).as_posix()))
         _, report = self.recover(pairs)
         self.assertEqual(len(report["clips"]), 2)
 
@@ -182,7 +182,7 @@ class ReaderTests(unittest.TestCase):
         pairs = self.stage()
         path = pairs[0][0].parent / "duplicate_0"
         path.write_bytes(pairs[0][0].read_bytes())
-        pairs.append((path, str(path.relative_to(self.root))))
+        pairs.append((path, path.relative_to(self.root).as_posix()))
         _, report = self.recover(pairs + pairs)
         self.assertEqual(report["clips"][0]["video_frames"], 60)
         self.assertEqual(report["statistics"]["duplicate_fragments"], 1)
@@ -212,7 +212,7 @@ class ReaderTests(unittest.TestCase):
                 "https://video.invalid/pattern_part0.mp4?token=synthetic&bytestart=0",
             )
         )
-        pairs.append((path, str(path.relative_to(self.root))))
+        pairs.append((path, path.relative_to(self.root).as_posix()))
         _, report = self.recover(pairs)
         self.assertEqual(sum(clip["video_frames"] for clip in report["clips"]), 30)
         self.assertGreater(report["statistics"]["conflicting_samples_skipped"], 0)
