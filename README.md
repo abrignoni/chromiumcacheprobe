@@ -30,7 +30,19 @@ python chromiumcacheprobe.py entries <cache folder>
 python chromiumcacheprobe.py recover <cache folder> -o <output parent folder>
 ```
 
-`entries` prints one tab-separated row per entry file: URL, HTTP status, content type, request, response and last-used times. `recover` creates a new run folder under the output parent (which must be outside the input) with `Videos/` and `provenance.json`.
+`entries` prints one tab-separated row per entry file: URL, HTTP status, content type, request, response and last-used times. `recover` creates a new run folder under the output parent (which must be outside the input) with `Videos/` and `provenance.json`. Add `--progress` to get one JSON progress line per step on stderr.
+
+### In a window
+
+```bash
+python chromiumcacheprobe_gui.py
+```
+
+`chromiumcacheprobe_gui.py` is an optional tkinter window over the same tool, standard library only. Choose the cache folder and an output folder, then **List entries** or **Rebuild videos**. The window runs the command line tool and shows what it prints, so the results are the same either way. Double-click a rebuilt clip to open it.
+
+### Without Python
+
+Each [release](https://github.com/abrignoni/chromiumcacheprobe/releases) has standalone executables of the command line tool and the window for Windows, macOS and Linux, built by this repository's own workflow. Before a release is published, both executables are run on the test cache and must write the same bytes as the Python files.
 
 From Python:
 

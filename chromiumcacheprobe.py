@@ -41,7 +41,7 @@ import struct
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 import zlib
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 VERSION = __version__
 MAX_CLIP_BYTES = 128 * 1024 * 1024
 INITIAL_MAGIC = 0xFCFB6D1BA7725C30
@@ -1625,6 +1625,9 @@ def entry_body(path, limit=MAX_BODY):
 
 def _cmd_entries(folder):
     folder = Path(folder)
+    if not folder.is_dir():
+        print(f"chromiumcacheprobe: not a folder: {folder}", file=sys.stderr)
+        return 2
     times = {}
     index = folder / "index-dir" / "the-real-index"
     if index.is_file():
@@ -1656,11 +1659,25 @@ def _cmd_entries(folder):
     return 0
 
 
-def _cmd_recover(folder, output):
+def _cmd_recover(folder, output, show_progress=False):
     folder = Path(folder)
+    if not folder.is_dir():
+        print(f"chromiumcacheprobe: not a folder: {folder}", file=sys.stderr)
+        return 2
     files = [(path, path.relative_to(folder).as_posix()) for path in sorted(folder.rglob("*"))
              if path.is_file() and not path.is_symlink()]
-    out, manifest = recover_files(files, output)
+
+    def progress(stage, **data):
+        # One JSON object per line on stderr, for a front end's progress bar.
+        record = {"stage": stage, "total_files": len(files)}
+        record.update({key: data[key] for key in ("files", "fragments", "clips", "status") if key in data})
+        print(json.dumps(record), file=sys.stderr, flush=True)
+
+    try:
+        out, manifest = recover_files(files, output, progress=progress if show_progress else None)
+    except ValueError as error:
+        print(f"chromiumcacheprobe: {error}", file=sys.stderr)
+        return 2
     print(json.dumps({"output": str(out), "status": manifest["status"],
                       "clips": [clip["file"] for clip in manifest["clips"]],
                       "statistics": manifest.get("statistics", {})}, indent=2))
@@ -1679,10 +1696,12 @@ def main(argv=None):
     recover.add_argument("folder")
     recover.add_argument("-o", "--output", required=True,
                          help="parent folder for the new run folder (outside the input)")
+    recover.add_argument("--progress", action="store_true",
+                         help="print progress as one JSON object per line on stderr")
     args = parser.parse_args(argv)
     if args.command == "entries":
         return _cmd_entries(args.folder)
-    return _cmd_recover(args.folder, args.output)
+    return _cmd_recover(args.folder, args.output, args.progress)
 
 
 if __name__ == "__main__":
