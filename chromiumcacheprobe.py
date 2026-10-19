@@ -1628,19 +1628,24 @@ def _cmd_entries(folder):
     if not folder.is_dir():
         print(f"chromiumcacheprobe: not a folder: {folder}", file=sys.stderr)
         return 2
+    # Walk the folder and the folders under it, as recover does, so choosing
+    # com.android.chrome/cache lists the entries in its Cache folder. Each cache
+    # folder's last-used times come from that folder's own index.
+    paths = [path for path in sorted(folder.rglob("*"))
+             if ENTRY_NAME.fullmatch(path.name) and path.is_file() and not path.is_symlink()]
     times = {}
-    index = folder / "index-dir" / "the-real-index"
-    if index.is_file():
-        try:
-            times = index_times(index)
-        except (OSError, ValueError, struct.error) as error:
-            print(f"# index not read: {error}", file=sys.stderr)
+    for parent in sorted({path.parent for path in paths}):
+        times[parent] = {}
+        index = parent / "index-dir" / "the-real-index"
+        if index.is_file():
+            try:
+                times[parent] = index_times(index)
+            except (OSError, ValueError, struct.error) as error:
+                print(f"# index not read: {index.relative_to(folder).as_posix()}: {error}", file=sys.stderr)
     print("\t".join(("file", "url", "status", "content_type", "request_time",
                      "response_time", "last_used")))
-    for path in sorted(folder.iterdir()):
+    for path in paths:
         match = ENTRY_NAME.fullmatch(path.name)
-        if not match or not path.is_file():
-            continue
         row = {"url": "", "status": "", "content_type": "", "request_time": "", "response_time": ""}
         try:
             if path.name.endswith("_0"):
@@ -1654,8 +1659,10 @@ def _cmd_entries(folder):
         except (OSError, ValueError, UnicodeError, struct.error) as error:
             row["status"] = f"unreadable: {error}"
         print("\t".join(str(value) for value in (
-            path.name, row["url"], row["status"], row["content_type"], row["request_time"],
-            row["response_time"], times.get(match.group(1), ""))))
+            path.relative_to(folder).as_posix(), row["url"], row["status"], row["content_type"],
+            row["request_time"], row["response_time"], times[path.parent].get(match.group(1), ""))))
+    if not paths:
+        print(f"# no cache entry files in {folder} or the folders under it", file=sys.stderr)
     return 0
 
 
@@ -1690,7 +1697,8 @@ def main(argv=None):
         description="Read a Chromium Simple Cache folder and rebuild cached H.264 video.")
     parser.add_argument("--version", action="version", version=__version__)
     commands = parser.add_subparsers(dest="command", required=True)
-    entries = commands.add_parser("entries", help="list the entries of a Cache_Data folder")
+    entries = commands.add_parser(
+        "entries", help="list the cache entries in a folder and the folders under it")
     entries.add_argument("folder")
     recover = commands.add_parser("recover", help="rebuild cached MP4 video from a folder")
     recover.add_argument("folder")

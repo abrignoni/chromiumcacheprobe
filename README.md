@@ -30,7 +30,7 @@ python chromiumcacheprobe.py entries <cache folder>
 python chromiumcacheprobe.py recover <cache folder> -o <output parent folder>
 ```
 
-`entries` prints one tab-separated row per entry file: URL, HTTP status, content type, request, response and last-used times. `recover` creates a new run folder under the output parent (which must be outside the input) with `Videos/` and `provenance.json`. Add `--progress` to get one JSON progress line per step on stderr.
+`entries` prints one tab-separated row per entry file in the folder and the folders under it, named by its path from that folder: URL, HTTP status, content type, request, response and last-used times. `recover` creates a new run folder under the output parent (which must be outside the input) with `Videos/` and `provenance.json`. Add `--progress` to get one JSON progress line per step on stderr.
 
 ### In a window
 

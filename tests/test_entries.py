@@ -86,6 +86,27 @@ class PublicCacheTests(unittest.TestCase):
         self.assertEqual(sorted(row[0] for row in rows), names)
         self.assertTrue(all(row[6] for row in rows))  # every entry has a last-used time
 
+    def entries_rows(self, folder):
+        with patch("sys.stdout") as stdout, patch("sys.stderr") as stderr:
+            self.assertEqual(ccp.main(["entries", str(folder)]), 0)
+        lines = "".join(call.args[0] for call in stdout.write.call_args_list).splitlines()
+        notes = "".join(call.args[0] for call in stderr.write.call_args_list)
+        return [line.split("\t") for line in lines[1:]], notes
+
+    def test_cli_entries_walks_down_from_a_parent_folder(self):
+        # The window's users pick com.android.chrome/cache as often as cache/Cache.
+        direct, _ = self.entries_rows(self.cache)
+        from_parent, notes = self.entries_rows(self.cache.parent)
+        self.assertEqual(from_parent, [["Cache/" + row[0]] + row[1:] for row in direct])
+        self.assertEqual(notes, "")
+
+    def test_cli_entries_says_when_it_finds_nothing(self):
+        empty = self.root / "empty"
+        empty.mkdir()
+        rows, notes = self.entries_rows(empty)
+        self.assertEqual(rows, [])
+        self.assertIn("no cache entry files", notes)
+
 
 class DecodeBodyTests(unittest.TestCase):
     BODY = b'{"kind": "Listing", "data": {"children": []}}' * 20
