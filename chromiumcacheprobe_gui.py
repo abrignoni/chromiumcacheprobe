@@ -100,6 +100,7 @@ def build_window(initial_folder="", smoke=None):
     """Build the window. With ``smoke`` = (cache, output) it runs one rebuild hidden."""
     import tkinter as tk  # pylint: disable=import-outside-toplevel
     from tkinter import filedialog, messagebox, ttk  # pylint: disable=import-outside-toplevel
+    import tkinter.font as tkfont  # pylint: disable=import-outside-toplevel
 
     root = tk.Tk()
     root.title(f"{TITLE} {ccp.__version__}")
@@ -165,13 +166,33 @@ def build_window(initial_folder="", smoke=None):
         log.see("end")
         log.configure(state="disabled")
 
+    def font_of(style, fallback):
+        name = ttk.Style().lookup(style, "font") or fallback
+        try:
+            return tkfont.nametofont(name)
+        except tk.TclError:
+            return tkfont.Font(font=name)
+
+    cell_font = font_of("Treeview", "TkDefaultFont")
+    heading_font = font_of("Treeview.Heading", "TkHeadingFont")
+
+    # Columns do not stretch: each grows to fit the longest value added, and the
+    # horizontal scrollbar reaches whatever is wider than the window. A stretching
+    # column is shrunk to fit the window instead, which hides the end of its values.
     def set_columns(columns):
         table.delete(*table.get_children())
         table["columns"] = columns
         for column in columns:
-            table.heading(column, text=column.replace("_", " "))
-            table.column(column, width=260 if column in ("url", "file", "sha256") else 120,
-                         stretch=column in ("url", "file"))
+            text = column.replace("_", " ")
+            table.heading(column, text=text)
+            table.column(column, width=heading_font.measure(text) + 16, minwidth=40, stretch=False)
+
+    def add_row(values):
+        table.insert("", "end", values=values)
+        for column, value in zip(table["columns"], values):
+            need = cell_font.measure(str(value)) + 16
+            if need > int(table.column(column, "width")):
+                table.column(column, width=need)
 
     # ---- running the command line ---------------------------------------------
     def pump(stream, tag):
@@ -224,7 +245,7 @@ def build_window(initial_folder="", smoke=None):
                 state["header"] = False
                 return
             values = line.rstrip("\n").split("\t")
-            table.insert("", "end", values=values + [""] * (len(ENTRY_COLUMNS) - len(values)))
+            add_row(values + [""] * (len(ENTRY_COLUMNS) - len(values)))
         else:
             state["stdout"].append(line)
 
@@ -276,7 +297,7 @@ def build_window(initial_folder="", smoke=None):
                 state["run"] = summary["output"]
                 run_status, rows = clip_rows(state["run"])
                 for row in rows:
-                    table.insert("", "end", values=row)
+                    add_row(row)
                 write(f"\nRun folder: {state['run']}\nStatus: {run_status}\n")
                 b_open["state"] = "normal"
             except (ValueError, KeyError, OSError) as error:
