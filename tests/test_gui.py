@@ -78,7 +78,7 @@ class GuiTests(unittest.TestCase):
             self.skipTest("Tk cannot open a display here")
         result = run("--smoke", str(self.cache), str(self.root / "smoke"))
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout.strip().splitlines()[-1]), {"exit": 0, "rows": 12})
+        self.assertEqual(json.loads(result.stdout.strip().splitlines()[-1]), {"exit": 0, "rows": 12, "logo": True, "icon": True})
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """chromiumcacheprobe GUI: a tkinter window over chromiumcacheprobe.py.
 
-Standard library only, like the tool it drives. The window runs the command line
+Standard library only, like the tool it drives. Its colours, header and logo come
+from chromiumcacheprobe_theme.py and assets/ beside it (the logo is left out when
+assets/ is missing). The window runs the command line
 tool as a subprocess with the same options it takes, so what it shows is what the
 command line prints:
 
@@ -38,6 +40,7 @@ import threading
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import chromiumcacheprobe as ccp  # noqa: E402  pylint: disable=wrong-import-position
+import chromiumcacheprobe_theme as ccp_theme  # noqa: E402  pylint: disable=wrong-import-position
 
 TITLE = "chromiumcacheprobe"
 ENTRY_COLUMNS = ("file", "url", "status", "content_type", "request_time", "response_time", "last_used")
@@ -104,48 +107,59 @@ def build_window(initial_folder="", smoke=None):
 
     root = tk.Tk()
     root.title(f"{TITLE} {ccp.__version__}")
-    root.geometry("1000x640")
-    root.minsize(760, 480)
+    root.geometry("1040x700")
+    root.minsize(780, 520)
     if smoke:
         root.attributes("-alpha", 0.0)
-    state = {"proc": None, "streams": 0, "mode": None, "run": "", "result": None}
+    theme = ccp_theme.Theme(root)
+    theme.apply(ccp_theme.system_dark())
+    assets = ccp_theme.assets_dir(HERE)
+    state = {"proc": None, "streams": 0, "mode": None, "run": "", "result": None,
+             "icon": ccp_theme.window_icon(root, assets, TITLE)}
     lines = queue.Queue()
 
+    head, _right = theme.header(root, TITLE, f"{ccp.__version__}   Chrome for Android media cache",
+                                logo_folder=assets, on_mode=theme.apply)
+    head.pack(fill="x")
+    state["logo"] = theme.logo is not None
+    page = ttk.Frame(root, padding=(18, 14, 18, 16))
+    page.pack(fill="both", expand=True)
+
     # ---- inputs -------------------------------------------------------------
-    form = ttk.Frame(root, padding=8)
-    form.pack(fill="x")
+    card, form = theme.card(page)
+    card.pack(fill="x")
     v_cache = tk.StringVar(value=initial_folder)
     v_output = tk.StringVar()
     for row, (label, var, hint) in enumerate((
             ("Cache folder", v_cache, "the Cache or Cache_Data folder inside com.android.chrome/cache"),
             ("Output folder", v_output, "a new run folder is created here; must be outside the cache folder"))):
-        ttk.Label(form, text=label).grid(row=row, column=0, sticky="w", padx=(0, 6), pady=2)
-        ttk.Entry(form, textvariable=var).grid(row=row, column=1, sticky="ew", pady=2)
+        ttk.Label(form, text=label, style="Card.TLabel").grid(row=row, column=0, sticky="w", padx=(0, 10), pady=3)
+        ttk.Entry(form, textvariable=var).grid(row=row, column=1, sticky="ew", pady=3)
         ttk.Button(form, text="Browse...",
                    command=lambda v=var, t=label: v.set(filedialog.askdirectory(title=t) or v.get())
-                   ).grid(row=row, column=2, padx=(6, 0), pady=2)
-        ttk.Label(form, text=hint, foreground="gray").grid(row=row, column=3, sticky="w", padx=(8, 0))
+                   ).grid(row=row, column=2, padx=(8, 0), pady=3)
+        ttk.Label(form, text=hint, style="CardMuted.TLabel").grid(row=row, column=3, sticky="w", padx=(10, 0))
     form.columnconfigure(1, weight=1)
 
-    buttons = ttk.Frame(root, padding=(8, 0))
-    buttons.pack(fill="x")
+    buttons = ttk.Frame(page)
+    buttons.pack(fill="x", pady=(14, 0))
+    b_recover = ttk.Button(buttons, text="Rebuild videos", style="Primary.TButton")
     b_entries = ttk.Button(buttons, text="List entries")
-    b_recover = ttk.Button(buttons, text="Rebuild videos")
     b_cancel = ttk.Button(buttons, text="Cancel", state="disabled")
     b_open = ttk.Button(buttons, text="Open output", state="disabled")
-    for button in (b_entries, b_recover, b_cancel, b_open):
-        button.pack(side="left", padx=(0, 6))
+    for button in (b_recover, b_entries, b_cancel, b_open):
+        button.pack(side="left", padx=(0, 8))
 
-    status_bar = ttk.Frame(root, padding=(8, 6))
-    status_bar.pack(fill="x")
+    status_bar = ttk.Frame(page)
+    status_bar.pack(fill="x", pady=(12, 10))
     progress = ttk.Progressbar(status_bar, mode="determinate", maximum=100)
     progress.pack(side="left", fill="x", expand=True)
-    status = ttk.Label(status_bar, text="Choose a cache folder.", width=48)
-    status.pack(side="left", padx=(8, 0))
+    status = ttk.Label(status_bar, text="Choose a cache folder.", width=48, style="Muted.TLabel")
+    status.pack(side="left", padx=(12, 0))
 
     # ---- results ------------------------------------------------------------
-    panes = ttk.PanedWindow(root, orient="vertical")
-    panes.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+    panes = ttk.PanedWindow(page, orient="vertical")
+    panes.pack(fill="both", expand=True)
     table_frame = ttk.Frame(panes)
     table = ttk.Treeview(table_frame, show="headings")
     scroll_y = ttk.Scrollbar(table_frame, orient="vertical", command=table.yview)
@@ -156,7 +170,8 @@ def build_window(initial_folder="", smoke=None):
     scroll_x.grid(row=1, column=0, sticky="ew")
     table_frame.rowconfigure(0, weight=1)
     table_frame.columnconfigure(0, weight=1)
-    log = tk.Text(panes, height=8, wrap="word", state="disabled")
+    log = tk.Text(panes, height=8, wrap="word", state="disabled", padx=10, pady=8)
+    theme.apply(theme.dark)   # colours the Text made after the first apply
     panes.add(table_frame, weight=3)
     panes.add(log, weight=1)
 
@@ -313,7 +328,7 @@ def build_window(initial_folder="", smoke=None):
             status["text"] = "cancelled"
         else:
             status["text"] = f"chromiumcacheprobe exited {code}"
-        state["result"] = (code, count)
+        state["result"] = (code, count, state["logo"], state["icon"])
         if smoke:
             root.after(10, root.destroy)
 
@@ -355,8 +370,9 @@ def main(argv):
         if len(argv) != 3:
             print("usage: chromiumcacheprobe_gui.py --smoke CACHE_FOLDER OUTPUT_FOLDER", file=sys.stderr)
             return 2
-        code, rows = build_window(smoke=(os.path.abspath(argv[1]), os.path.abspath(argv[2]))) or (None, 0)
-        print(json.dumps({"exit": code, "rows": rows}))
+        code, rows, logo, icon = (build_window(smoke=(os.path.abspath(argv[1]), os.path.abspath(argv[2])))
+                                  or (None, 0, False, False))
+        print(json.dumps({"exit": code, "rows": rows, "logo": logo, "icon": icon}))
         return 0 if code == 0 else 1
     build_window(os.path.abspath(argv[0]) if argv and os.path.isdir(argv[0]) else "")
     return 0

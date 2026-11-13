@@ -40,6 +40,8 @@ python chromiumcacheprobe_gui.py
 
 `chromiumcacheprobe_gui.py` is an optional tkinter window over the same tool, standard library only. Choose the cache folder and an output folder, then **List entries** or **Rebuild videos**. The window runs the command line tool and shows what it prints, so the results are the same either way. Double-click a rebuilt clip to open it.
 
+The window needs `chromiumcacheprobe_theme.py` beside it (colours and the header, also standard library). The logo comes from `assets/`; without that folder the window opens with no logo. It starts in the system's light or dark mode, and the switch in its header changes it for that session.
+
 ### Without Python
 
 Each [release](https://github.com/abrignoni/chromiumcacheprobe/releases) has standalone executables of the command line tool and the window for Windows, macOS and Linux, built by this repository's own workflow. Before a release is published, both executables are run on the test cache and must write the same bytes as the Python files.
