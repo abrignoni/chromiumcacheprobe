@@ -104,9 +104,11 @@ jobs:
             macOS) icon=assets/chromiumcacheprobe.icns ;;
             *) icon=NONE ;;
           esac
+          # (a tag from before the window had a logo has no assets folder)
+          extra=(); [ -d assets ] && extra=(--add-data "assets:assets" --icon "$icon")
           pyinstaller --noconfirm --clean --onefile --windowed \
             --name chromiumcacheprobe_gui --hidden-import chromiumcacheprobe --hidden-import brotli \
-            --hidden-import chromiumcacheprobe_theme --add-data "assets:assets" --icon "$icon" \
+            --hidden-import chromiumcacheprobe_theme "${extra[@]}" \
             chromiumcacheprobe_gui.py
 
       - name: Check the executables write what the source writes
@@ -135,6 +137,8 @@ jobs:
         shell: python
         run: |
           import json, os, subprocess, sys, tempfile, zipfile
+          if not os.path.isdir(os.path.join("src", "assets")):
+              sys.exit(print("this source is from before the window had a logo; nothing to check"))
           ext = ".exe" if os.name == "nt" else ""
           work = tempfile.mkdtemp()
           with zipfile.ZipFile(os.path.join("src", "tests", "fixtures", "dfrws2021_s10_subset.zip")) as archive:
@@ -208,9 +212,10 @@ jobs:
 
       - name: Checksums of the archives and the source files
         run: |
-          cp src/chromiumcacheprobe.py src/chromiumcacheprobe_gui.py src/chromiumcacheprobe_theme.py artifacts/
-          cd artifacts && sha256sum chromiumcacheprobe-* chromiumcacheprobe.py chromiumcacheprobe_gui.py chromiumcacheprobe_theme.py > SHA256SUMS.txt && cat SHA256SUMS.txt
-          test "$(wc -l < SHA256SUMS.txt)" -eq 9
+          cp src/chromiumcacheprobe.py src/chromiumcacheprobe_gui.py artifacts/
+          [ ! -f src/chromiumcacheprobe_theme.py ] || cp src/chromiumcacheprobe_theme.py artifacts/   # (not in tags from before the window's theme)
+          cd artifacts && sha256sum chromiumcacheprobe-* chromiumcacheprobe*.py > SHA256SUMS.txt && cat SHA256SUMS.txt
+          test "$(wc -l < SHA256SUMS.txt)" -eq "$(( 6 + $(ls chromiumcacheprobe*.py | wc -l) ))"
 
       - name: Create the release
         env:
