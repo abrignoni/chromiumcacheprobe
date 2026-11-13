@@ -41,7 +41,7 @@ import struct
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 import zlib
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 VERSION = __version__
 MAX_CLIP_BYTES = 128 * 1024 * 1024
 INITIAL_MAGIC = 0xFCFB6D1BA7725C30
